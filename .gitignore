@@ -1,0 +1,5 @@
+.env
+/scripts/.env
+/node_modules/
+updated_file.xlsx
+Weekly_Performance_modified.xlsx
