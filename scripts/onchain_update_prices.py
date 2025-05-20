@@ -45,8 +45,8 @@ while empty_count < STOP_EMPTY_LIMIT:
             ws[f"{PRICE_COL}{row}"] = price
             print(f"✅ {symbol}: ${price:.2f} successfuly imported")
 
-        except Exception as e:
-            print(f"❌ Error fetching {symbol}: {e}")
+        except Exception as error:
+            print(f"❌ Error fetching {symbol}: {error}")
 
         time.sleep(REQUEST_DELAY)
     
