@@ -1,25 +1,38 @@
 from openpyxl import load_workbook
+import sys
 
-workbook = load_workbook("../docs/Weekly_performance_modified.xlsx")
-
-sheet = workbook["ONCHAIN"]
-FILE_NAME = "../docs/updated_file.xlsx"
+INPUT_FILE       = "../docs/Weekly_Performance.xlsx"
+OUTPUT_FILE      = "../docs/updated_file.xlsx"
+SHEET_NAME       = "ONCHAIN"
 STOP_EMPTY_LIMIT = 10
 
+try:
+    wb = load_workbook(INPUT_FILE)
+except FileNotFoundError:
+    print(f"ERROR: Could not find {INPUT_FILE}", file=sys.stderr)
+    sys.exit(1)
+
+if SHEET_NAME not in wb.sheetnames:
+    print(f"ERROR: Sheet '{SHEET_NAME}' not found in {INPUT_FILE}", file=sys.stderr)
+    sys.exit(1)
+
+ws = wb[SHEET_NAME]
+
 empty_count = 0
-row = 2
+row = 4
 
 while empty_count < STOP_EMPTY_LIMIT:
-    f_cell = sheet[f'F{row}']
-    d_cell = sheet[f'D{row}']
+    price_cell = ws[f"H{row}"]
+    target_cell = ws[f"F{row}"]
 
-    if f_cell.value is not None and isinstance(f_cell.value, (int, float)):
-        d_cell.value = f_cell.value
+    val = price_cell.value
+    if isinstance(val, (int, float)):
+        target_cell.value = val
         empty_count = 0
     else:
-        empty_count +=1
+        empty_count += 1
 
-    row+=1
+    row += 1
 
-workbook.save(FILE_NAME)
-print(f"✅ Successfully rewrited prices into file: {FILE_NAME}")
+wb.save(OUTPUT_FILE)
+print(f"✅ Successfully rewrote prices into file: {OUTPUT_FILE}")

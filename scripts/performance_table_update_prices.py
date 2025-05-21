@@ -8,14 +8,14 @@ import os
 load_dotenv()
 
 API_KEY = os.getenv("API_KEY")
-INPUT_FILE = "../docs/Weekly_Performance_modified.xlsx"
-OUTPUT_FILE = "../docs/updated_performance.xlsx"
-SHEET_NAME = "PERFORMANCE_TABLE"
-START_ROW = 2
-SYMBOL_COL = 'C'
-PRICE_COL = 'E'
+INPUT_FILE       = "../docs/Weekly_Performance_modified.xlsx"
+OUTPUT_FILE      = "../docs/updated_performance.xlsx"
+SHEET_NAME       = "PERFORMANCE_TABLE"
+START_ROW        = 2
+SYMBOL_COL       = 'C'
+PRICE_COL        = 'E'
 STOP_EMPTY_LIMIT = 10
-REQUEST_DELAY = 2.1
+REQUEST_DELAY    = 2.1
 
 CMC_URL = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest"
 HEADERS = {"X-CMC_PRO_API_KEY": API_KEY}
@@ -60,10 +60,10 @@ while empty_count < STOP_EMPTY_LIMIT:
                 price_cell.value = price
                 print(f"✅ {symbol}: ${price:.2f} successfuly imported")
             else:
-                print(f"Symbol {symbol_clean} not found.")
+                print(f"❌ Symbol {symbol_clean} not found.")
 
         except Exception as error:
-            print(f"Error fetching {symbol_clean}: {error}")
+            print(f"❌ Error fetching {symbol_clean}: {error}")
 
         time.sleep(REQUEST_DELAY)
 
