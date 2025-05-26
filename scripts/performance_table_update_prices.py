@@ -8,8 +8,8 @@ import os
 load_dotenv()
 
 API_KEY = os.getenv("API_KEY")
-INPUT_FILE       = "../docs/Weekly_Performance_modified.xlsx"
-OUTPUT_FILE      = "../docs/updated_performance.xlsx"
+INPUT_FILE       = "../docs/Weekly_Performance.xlsx"
+OUTPUT_FILE      = "../docs/Weekly_Performance_updated.xlsx"
 SHEET_NAME       = "PERFORMANCE_TABLE"
 START_ROW        = 2
 SYMBOL_COL       = 'C'
@@ -27,6 +27,15 @@ row = START_ROW
 empty_count = 0
 
 YELLOW_FILL_HEX = "FFFF00"
+
+def smart_round(price):
+    if price >= 0.01:
+        return round(price, 2)
+    else:
+        decimals = 4
+        while round(price, decimals) == 0 and decimals < 12:
+            decimals += 1
+        return round(price, decimals)
 
 def is_yellow(cell):
     fill = cell.fill
@@ -57,8 +66,9 @@ while empty_count < STOP_EMPTY_LIMIT:
 
             if "data" in data and symbol_clean in data["data"]:
                 price = data["data"][symbol_clean]["quote"]["USD"]["price"]
-                price_cell.value = price
-                print(f"✅ {symbol}: ${price:.2f} successfuly imported")
+                rounded_price = smart_round(price)
+                price_cell.value = rounded_price
+                print(f"✅ {symbol}: ${rounded_price} successfuly imported")
             else:
                 print(f"❌ Symbol {symbol_clean} not found.")
 
