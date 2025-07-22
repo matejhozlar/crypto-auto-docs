@@ -1,7 +1,7 @@
 from openpyxl import load_workbook
 import sys
 
-INPUT_FILE       = "../docs/Weekly_Performance.xlsx"
+INPUT_FILE       = "../docs/Monthly_Performance_CVR.xlsx"
 OUTPUT_FILE      = "../docs/updated_file.xlsx"
 SHEET_NAME       = "ONCHAIN"
 STOP_EMPTY_LIMIT = 10

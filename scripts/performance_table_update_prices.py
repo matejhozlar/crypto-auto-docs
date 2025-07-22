@@ -8,8 +8,8 @@ import os
 load_dotenv()
 
 API_KEY = os.getenv("API_KEY")
-INPUT_FILE       = "../docs/Weekly_Performance.xlsx"
-OUTPUT_FILE      = "../docs/Weekly_Performance_updated.xlsx"
+INPUT_FILE       = "../docs/Weekly_Performance_PORTFOLIO.xlsx"
+OUTPUT_FILE      = "../docs/Weekly_Performance_PORTFOLIO_latest.xlsx"
 SHEET_NAME       = "PERFORMANCE_TABLE"
 START_ROW        = 2
 SYMBOL_COL       = 'C'
@@ -39,10 +39,15 @@ def smart_round(price):
 
 def is_yellow(cell):
     fill = cell.fill
-    if not fill or not isinstance(fill.fill_type, str):
+    if not fill or not isinstance(fill.fill_type, str) or fill.fill_type != "solid":
         return False
-    fg_color = fill.fgColor.rgb or fill.fgColor.indexed
-    return fg_color and YELLOW_FILL_HEX in fg_color
+
+    fg_color = fill.fgColor
+
+    if fg_color.type == 'rgb' and fg_color.rgb:
+        color = fg_color.rgb.upper()
+        return color.endswith(YELLOW_FILL_HEX)
+    return False
 
 while empty_count < STOP_EMPTY_LIMIT:
     symbol_cell = ws[f"{SYMBOL_COL}{row}"]
