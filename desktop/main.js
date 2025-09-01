@@ -12,6 +12,8 @@ import fs from "fs";
 import { spawn, execFileSync } from "child_process";
 import { create } from "domain";
 
+const running = new Map();
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -19,6 +21,43 @@ const projectRoot = path.resolve(__dirname, "..");
 const pythonScriptsCwd = projectRoot;
 const docsDir = path.join(projectRoot, "docs");
 const scriptsDir = path.join(projectRoot, "scripts");
+
+function terminateProcess(child) {
+  return new Promise((resolve) => {
+    const done = () => resolve();
+    let finished = false;
+    const finishOnce = () => {
+      if (!finished) {
+        finished = true;
+        done();
+      }
+    };
+
+    child.once("close", finishOnce);
+    try {
+      if (process.platform === "win32") {
+        const killer = spawn("taskkill", [
+          "/PID",
+          String(child.pid),
+          "/T",
+          "/F",
+        ]);
+        killer.once("close", finishOnce);
+      } else {
+        child.kill("SIGTERM");
+        setTimeout(() => {
+          if (!finished) {
+            try {
+              child.kill("SIGKILL");
+            } catch {}
+          }
+        }, 1200);
+      }
+    } catch {
+      finishOnce();
+    }
+  });
+}
 
 function getPythonCmd() {
   const candidates =
@@ -76,6 +115,7 @@ function runPythonStream({ entry, args = [], cwd, env = {}, sender, id }) {
     },
   });
 
+  running.set(id, child);
   const ch = (t) => `py:${id}:${t}`;
 
   sender.send(ch("start"), { pid: child.pid });
@@ -85,6 +125,7 @@ function runPythonStream({ entry, args = [], cwd, env = {}, sender, id }) {
 
   return new Promise((resolve, reject) => {
     child.on("close", (code) => {
+      running.delete(id);
       sender.send(ch("exit"), code);
       if (code === 0) resolve();
       else reject(new Error(`Python exited with code ${code}`));
@@ -191,6 +232,13 @@ app.whenReady().then(() => {
 
   ipcMain.handle("run-onchain", handleRunOnchain);
   ipcMain.handle("run-weekly", handleRunWeekly);
+  ipcMain.handle("stop-run", async (event, { id }) => {
+    const child = running.get(id);
+    if (!child) return { ok: false, reason: "not-running" };
+    event.sender.send(`py:${id}:stopping`);
+    await terminateProcess(child);
+    return { ok: true };
+  });
 
   createWindow();
   app.on("activate", () => {

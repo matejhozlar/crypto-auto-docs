@@ -4,247 +4,137 @@
     <meta charset="utf-8" />
     <meta name="color-scheme" content="dark" />
     <title>Crypto Auto Docs</title>
-    <style>
-      :root {
-        --bg: #121212;
-        --panel: #1e1e1e;
-        --text: #e6e6e6;
-        --muted: #b8b8b8;
-        --accent: #4f8cff;
-        --border: #2a2a2a;
-      }
-      html,
-      body {
-        height: 100%;
-      }
-      body {
-        margin: 0;
-        font-family:
-          system-ui,
-          -apple-system,
-          Segoe UI,
-          Roboto,
-          Ubuntu,
-          Cantarell,
-          sans-serif;
-        background: var(--bg);
-        color: var(--text);
-      }
-      .container {
-        padding: 24px;
-        max-width: 980px;
-        margin: 0 auto;
-      }
-      h2,
-      h3 {
-        margin: 0 0 12px;
-        font-weight: 600;
-      }
-      .card {
-        background: var(--panel);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 16px;
-        margin: 16px 0;
-        box-shadow: 0 1px 8px rgba(0, 0, 0, 0.25);
-      }
-      .row {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-        margin: 12px 0;
-      }
-      label {
-        min-width: 160px;
-        color: var(--muted);
-      }
-      input[type="text"] {
-        flex: 1;
-        color: var(--text);
-        background: #161616;
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 8px 10px;
-        outline: none;
-      }
-      input[type="text"]::placeholder {
-        color: #777;
-      }
-      button {
-        padding: 8px 12px;
-        border-radius: 8px;
-        border: 1px solid var(--border);
-        background: #232323;
-        color: var(--text);
-        cursor: pointer;
-      }
-      button:hover {
-        background: #2a2a2a;
-      }
-      button.primary {
-        background: var(--accent);
-        border-color: transparent;
-        color: white;
-      }
-      pre {
-        background: #0f0f0f;
-        border: 1px solid var(--border);
-        padding: 12px;
-        border-radius: 8px;
-        max-height: 220px;
-        overflow: auto;
-      }
-      a#download {
-        color: var(--accent);
-        text-decoration: none;
-      }
-      a#download:hover {
-        text-decoration: underline;
-      }
-      /* If you later go frameless, make a draggable top bar: */
-      /* .drag { -webkit-app-region: drag; height: 36px; } */
-    </style>
+    <link rel="stylesheet" href="./styles/styles.css" />
   </head>
   <body>
-    <div class="container">
-      <h2>Crypto Auto Docs</h2>
+    <div id="splash" class="splash">
+      <div class="spinner"></div>
+      <div class="splash-title">Crypto Auto Docs</div>
+      <div class="splash-sub">Preparing workspace…</div>
+    </div>
 
-      <div class="card">
-        <h3>API</h3>
-        <div class="row">
-          <label>CoinMarketCap API Key</label>
-          <input id="apiKey" type="text" placeholder="API_KEY" />
-        </div>
-      </div>
+    <main id="app" class="app hidden">
+      <header class="topbar">
+        <h1>Crypto Auto Docs</h1>
+      </header>
 
-      <div class="card">
-        <h3>Inputs</h3>
-        <div class="row">
-          <label>Monthly file</label>
-          <input
-            id="monthlyPath"
-            type="text"
-            placeholder="Monthly_Performance_CVR.xlsx"
-            readonly
-          />
-          <button onclick="pickMonthly()">Choose…</button>
-        </div>
-        <div class="row">
-          <label>Weekly file</label>
-          <input
-            id="weeklyPath"
-            type="text"
-            placeholder="Weekly_Performance_PORTFOLIO.xlsx"
-            readonly
-          />
-          <button onclick="pickWeekly()">Choose…</button>
-        </div>
-      </div>
+      <section class="tiles">
+        <button
+          class="tile weekly"
+          data-mode="weekly"
+          aria-label="Weekly Performance"
+        >
+          <div class="tile-inner">
+            <div class="tile-icon">📈</div>
+            <h2>Weekly Performance</h2>
+            <p>Update weekly performance portfolio</p>
+          </div>
+        </button>
 
-      <div class="card">
-        <h3>Actions</h3>
-        <div class="row">
-          <button class="primary" onclick="runOnchain()">
-            Run On-Chain Pipeline
-          </button>
-          <button onclick="runWeekly()">Update Weekly Prices</button>
-        </div>
-      </div>
+        <button
+          class="tile monthly"
+          data-mode="monthly"
+          aria-label="Monthly / On-chain"
+        >
+          <div class="tile-inner">
+            <div class="tile-icon">🧮</div>
+            <h2>Monthly (On-Chain)</h2>
+            <p>Update monthly CVR</p>
+          </div>
+        </button>
+      </section>
 
-      <div class="card">
-        <h3>Output</h3>
-        <div class="row"><pre id="log"></pre></div>
-        <div class="row">
-          <a id="download" href="#" download hidden>Download result</a>
+      <section id="consoleDrawer" class="drawer hidden">
+        <header class="drawer-head">
+          <div class="drawer-title">
+            <span id="runIcon" class="run-icon hidden"></span>
+            <span id="runLabel">Console</span>
+            <small id="runStatus" class="muted"></small>
+          </div>
+          <div class="drawer-actions">
+            <button id="btnStop" class="danger hidden">Stop</button>
+            <button id="btnCollapse" class="ghost">Collapse</button>
+            <button id="btnCopy" class="ghost">Copy</button>
+            <button id="btnClear" class="ghost">Clear</button>
+            <a id="download" class="primary" href="#" download hidden
+              >Download result</a
+            >
+          </div>
+        </header>
+
+        <div id="logWrap" class="logwrap">
+          <ul id="logList" class="loglist"></ul>
         </div>
+      </section>
+
+      <footer class="footer">
+        © 2025 Matej Hozlár · Internal tooling · All rights reserved
+      </footer>
+    </main>
+
+    <div id="setupModal" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-card">
+        <header class="modal-head">
+          <h3 id="modalTitle">Setup</h3>
+          <button id="modalClose" class="iconbtn" aria-label="Close">✕</button>
+        </header>
+
+        <div class="modal-body">
+          <div class="field">
+            <label for="apiKey">CoinMarketCap API Key</label>
+            <input id="apiKey" type="password" placeholder="Enter API key…" />
+          </div>
+
+          <div id="weeklyFields" class="group hidden">
+            <div class="field">
+              <label>Weekly file</label>
+              <div class="pickrow">
+                <input
+                  id="weeklyPath"
+                  type="text"
+                  placeholder="Weekly_Performance_PORTFOLIO.xlsx"
+                  readonly
+                />
+                <button id="pickWeekly" class="ghost">Choose…</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="monthlyFields" class="group hidden">
+            <div class="field">
+              <label>Monthly file</label>
+              <div class="pickrow">
+                <input
+                  id="monthlyPath"
+                  type="text"
+                  placeholder="Monthly_Performance_CVR.xlsx"
+                  readonly
+                />
+                <button id="pickMonthly" class="ghost">Choose…</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>Weekly file</label>
+              <div class="pickrow">
+                <input
+                  id="monthlyWeeklyPath"
+                  type="text"
+                  placeholder="Weekly_Performance_PORTFOLIO.xlsx"
+                  readonly
+                />
+                <button id="pickMonthlyWeekly" class="ghost">Choose…</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="modal-foot">
+          <button id="modalCancel" class="ghost">Cancel</button>
+          <button id="modalStart" class="primary">Start</button>
+        </footer>
       </div>
     </div>
 
-    <script>
-      const $ = (id) => document.getElementById(id);
-      const logEl = () => $("log");
-
-      const append = (s) => {
-        logEl().textContent += s;
-        logEl().scrollTop = logEl().scrollHeight;
-      };
-      const appendErr = (s) => append(s);
-
-      const unsub = [
-        window.api.onWeeklyStdout(append),
-        window.api.onWeeklyStderr(appendErr),
-        window.api.onWeeklyExit((code) =>
-          append(`\n[Weekly exited ${code}]\n`)
-        ),
-
-        window.api.onOnchainStdout(append),
-        window.api.onOnchainStderr(appendErr),
-        window.api.onOnchainExit((code) =>
-          append(`\n[On-chain exited ${code}]\n`)
-        ),
-      ];
-
-      window.addEventListener("beforeunload", () =>
-        unsub.forEach((fn) => fn && fn())
-      );
-
-      async function pickMonthly() {
-        const p = await window.api.pickFile(
-          "Choose Monthly_Performance_CVR.xlsx"
-        );
-        if (p) $("monthlyPath").value = p;
-      }
-      async function pickWeekly() {
-        const p = await window.api.pickFile(
-          "Choose Weekly_Performance_PORTFOLIO.xlsx"
-        );
-        if (p) $("weeklyPath").value = p;
-      }
-
-      function setLog(text) {
-        $("log").textContent = text || "";
-      }
-      function setDownload(path, ok) {
-        const a = $("download");
-        if (ok && path) {
-          a.hidden = false;
-          a.textContent = path;
-          a.href = "file://" + path;
-        } else {
-          a.hidden = true;
-          a.textContent = "";
-          a.removeAttribute("href");
-        }
-      }
-
-      async function runWeekly() {
-        $("log").textContent = ""; // clear
-        setDownload(null, false);
-        try {
-          const res = await window.api.runWeekly({
-            apiKey: $("apiKey").value.trim(),
-            weeklyPath: $("weeklyPath").value || null,
-          });
-          setDownload(res.outputPath, res.exists);
-        } catch (e) {
-          append("\n" + String(e) + "\n");
-        }
-      }
-
-      async function runOnchain() {
-        $("log").textContent = "";
-        setDownload(null, false);
-        try {
-          const res = await window.api.runOnchain({
-            apiKey: $("apiKey").value.trim(),
-            monthlyPath: $("monthlyPath").value || null,
-            weeklyPath: $("weeklyPath").value || null,
-          });
-          setDownload(res.outputPath, res.exists);
-        } catch (e) {
-          append("\n" + String(e) + "\n");
-        }
-      }
-    </script>
+    <script type="module" src="./scripts/renderer.js"></script>
   </body>
 </html>

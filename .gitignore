@@ -1,4 +1,5 @@
 .env
 /scripts/.env
 /node_modules/
+/desktop/node_modules/
 /docs/

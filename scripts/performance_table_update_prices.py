@@ -1,88 +1,149 @@
-import requests
-import time
-from openpyxl import load_workbook
-from openpyxl.styles import PatternFill
-from dotenv import load_dotenv
-import os
+#!/usr/bin/env python3
+from __future__ import annotations
 
-load_dotenv()
+import os
+import time
+import argparse
+from pathlib import Path
+
+import requests
+from dotenv import load_dotenv
+from openpyxl import load_workbook
+from typing import Optional
+
+def log_ok(msg):   print(f"[OK] {msg}",   flush=True)
+def log_info(msg): print(f"[INFO] {msg}", flush=True)
+def log_warn(msg): print(f"[WARN] {msg}", flush=True)
+def log_err(msg):  print(f"[ERR] {msg}",  flush=True)
+
+SCRIPT_DIR = Path(__file__).resolve().parent              
+ROOT_DIR   = SCRIPT_DIR.parent                            
+DOCS_DIR   = ROOT_DIR / "docs"                            
+
+load_dotenv(ROOT_DIR / ".env")
+load_dotenv(SCRIPT_DIR / ".env")  
 
 API_KEY = os.getenv("API_KEY")
-INPUT_FILE       = "../docs/Weekly_Performance_PORTFOLIO.xlsx"
-OUTPUT_FILE      = "../docs/Weekly_Performance_PORTFOLIO_latest.xlsx"
+
+CMC_URL  = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest"
+HEADERS  = {"X-CMC_PRO_API_KEY": API_KEY}
+
 SHEET_NAME       = "PERFORMANCE_TABLE"
 START_ROW        = 2
-SYMBOL_COL       = 'C'
-PRICE_COL        = 'E'
+SYMBOL_COL       = "C"
+PRICE_COL        = "E"
 STOP_EMPTY_LIMIT = 10
-REQUEST_DELAY    = 2.1
+REQUEST_DELAY    = 2.1 
 
-CMC_URL = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest"
-HEADERS = {"X-CMC_PRO_API_KEY": API_KEY}
+YELLOW_RGB = "FFFF00"
 
-wb = load_workbook(INPUT_FILE)
-ws = wb[SHEET_NAME]
+def _color_hex6(fg) -> Optional[str]:
+    if not fg:
+        return None
 
-row = START_ROW
-empty_count = 0
+    for attr in ("rgb", "value"):
+        v = getattr(fg, attr, None)
+        if v:
+            try:
+                s = str(v).strip().upper()
+            except Exception:
+                continue
+            if len(s) == 8:
+                s = s[-6:]
+            if len(s) == 6:
+                return s
 
-YELLOW_FILL_HEX = "FFFF00"
+    idx = getattr(fg, "indexed", None)
+    if isinstance(idx, int) and idx == 6:
+        return YELLOW_RGB
+    
+    return None
 
-def smart_round(price):
-    if price >= 0.01:
-        return round(price, 2)
-    else:
-        decimals = 4
-        while round(price, decimals) == 0 and decimals < 12:
-            decimals += 1
-        return round(price, decimals)
-
-def is_yellow(cell):
-    fill = cell.fill
-    if not fill or not isinstance(fill.fill_type, str) or fill.fill_type != "solid":
+def is_yellow(cell) -> bool:
+    """Detect Excel yellow cells robustly."""
+    fill = getattr(cell, "fill", None)
+    if not fill or getattr(fill, "fill_type", None) != "solid":
         return False
 
-    fg_color = fill.fgColor
+    fg = getattr(fill, "fgColor", None)
+    hex6 = _color_hex6(fg)
+    return hex6 == YELLOW_RGB
 
-    if fg_color.type == 'rgb' and fg_color.rgb:
-        color = fg_color.rgb.upper()
-        return color.endswith(YELLOW_FILL_HEX)
-    return False
+def smart_round(price: float) -> float:
+    if price >= 0.01:
+        return round(price, 2)
+    decimals = 4
+    while round(price, decimals) == 0 and decimals < 12:
+        decimals += 1
+    return round(price, decimals)
 
-while empty_count < STOP_EMPTY_LIMIT:
-    symbol_cell = ws[f"{SYMBOL_COL}{row}"]
-    price_cell = ws[f"{PRICE_COL}{row}"]
-    symbol = symbol_cell.value
+def fetch_cmc_price(symbol: str) -> float | None:
+    params = {"symbol": symbol, "convert": "USD"}
+    r = requests.get(CMC_URL, headers=HEADERS, params=params, timeout=20)
+    data = r.json() if r.content else {}
+    try:
+        return data["data"][symbol]["quote"]["USD"]["price"]
+    except Exception:
+        return None
 
-    if symbol is None:
-        empty_count += 1
-    elif str(symbol).strip().upper() == "TICKER":
-        row += 1
-        continue
-    elif not is_yellow(price_cell):
-        print(f"Skipping row {row} (not yellow)")
-    else:
-        empty_count = 0
-        symbol_clean = str(symbol).strip().upper()
-        try:
-            params = {"symbol": symbol_clean, "convert": "USD"}
-            response = requests.get(CMC_URL, headers=HEADERS, params=params)
-            data = response.json()
+def run(input_path: Path, output_path: Path) -> None:
+    if not API_KEY:
+        raise SystemExit("API_KEY is missing. Put it in .env at repo root or scripts/.")
 
-            if "data" in data and symbol_clean in data["data"]:
-                price = data["data"][symbol_clean]["quote"]["USD"]["price"]
-                rounded_price = smart_round(price)
-                price_cell.value = rounded_price
-                print(f"✅ {symbol}: ${rounded_price} successfuly imported")
+    if not input_path.exists():
+        raise SystemExit(f"Input file not found: {input_path}")
+
+    wb = load_workbook(str(input_path))
+    if SHEET_NAME not in wb.sheetnames:
+        raise SystemExit(f"Sheet '{SHEET_NAME}' not found in {input_path.name}")
+    ws = wb[SHEET_NAME]
+
+    row = START_ROW
+    empty_count = 0
+
+    while empty_count < STOP_EMPTY_LIMIT:
+        symbol_cell = ws[f"{SYMBOL_COL}{row}"]
+        price_cell  = ws[f"{PRICE_COL}{row}"]
+        symbol      = symbol_cell.value
+
+        if symbol is None:
+            empty_count += 1
+        else:
+            ticker = str(symbol).strip().upper()
+            if ticker == "TICKER":
+                row += 1
+                continue
+
+            if not is_yellow(price_cell):
+                log_warn(f"Skipping row {row} (not yellow)")
             else:
-                print(f"❌ Symbol {symbol_clean} not found.")
+                empty_count = 0
+                try:
+                    price = fetch_cmc_price(ticker)
+                    if price is not None:
+                        rounded = smart_round(price)
+                        price_cell.value = rounded
+                        log_ok(f"{ticker}: ${rounded} successfully imported")
+                    else:
+                        log_warn(f"Symbol {ticker} not found in CMC response.")
+                except Exception as e:
+                    log_err(f"Error fetching {ticker}: {e}")
 
-        except Exception as error:
-            print(f"❌ Error fetching {symbol_clean}: {error}")
+                time.sleep(REQUEST_DELAY)
 
-        time.sleep(REQUEST_DELAY)
+        row += 1
 
-    row += 1
+    wb.save(str(output_path))
+    log_ok(f"Successfully updated prices in: {output_path}")
 
-wb.save(OUTPUT_FILE)
-print(f"✅ Successfuly updated prices in filename: {OUTPUT_FILE}")
+def parse_args():
+    p = argparse.ArgumentParser(description="Update yellow prices in PERFORMANCE_TABLE.")
+    p.add_argument("--input",  type=Path, default=DOCS_DIR / "Weekly_Performance_PORTFOLIO.xlsx",
+                   help="Path to input Weekly_Performance_PORTFOLIO.xlsx")
+    p.add_argument("--output", type=Path, default=DOCS_DIR / "Weekly_Performance_PORTFOLIO_latest.xlsx",
+                   help="Path to output workbook")
+    return p.parse_args()
+
+if __name__ == "__main__":
+    args = parse_args()
+    run(args.input, args.output)
