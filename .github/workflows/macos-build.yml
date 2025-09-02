@@ -3,13 +3,27 @@ name: macOS build
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: ["**"]
     paths:
       - "desktop/**"
+      - ".github/workflows/**"
+  pull_request:
+    branches: ["**"]
+    paths:
+      - "desktop/**"
+      - ".github/workflows/**"
+
+concurrency:
+  group: macos-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-macos:
     runs-on: macos-latest
+
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - name: Checkout
@@ -38,3 +52,4 @@ jobs:
             desktop/out/make/**/*.dmg
             desktop/out/make/**/*.zip
             desktop/out/**/mac-*/Crypto Auto Docs.app
+          retention-days: 14
