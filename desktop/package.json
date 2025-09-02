@@ -10,8 +10,8 @@
     "prepackage": "node scripts/prepare-appdata.js",
     "premake": "node scripts/prepare-appdata.js",
     "start": "electron-forge start",
-    "package": "electron-forge package",
-    "make": "electron-forge make"
+    "package": "npm run prepackage && electron-forge package",
+    "make": "npm run premake && electron-forge make"
   },
   "keywords": [],
   "license": "ISC",
