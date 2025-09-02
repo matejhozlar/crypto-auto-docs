@@ -11,7 +11,6 @@ import { fileURLToPath } from "url";
 import fs from "fs";
 import { spawn, execFileSync } from "child_process";
 import { createRequire } from "module";
-import os from "os";
 
 const settingsFile = () => path.join(app.getPath("userData"), "settings.json");
 
@@ -51,6 +50,44 @@ const projectRoot = base;
 const pythonScriptsCwd = projectRoot;
 const docsDir = path.join(projectRoot, "docs");
 const scriptsDir = path.join(projectRoot, "scripts");
+
+function resolveWorker(name) {
+  const binName = process.platform === "win32" ? `${name}.exe` : name;
+  const devPath = path.join(
+    __dirname,
+    "bin",
+    process.platform === "win32" ? "win" : "darwin",
+    binName
+  );
+  const pkgPath = path.join(
+    base,
+    "bin",
+    process.platform === "win32" ? "win" : "darwin",
+    binName
+  );
+  return fs.existsSync(pkgPath) ? pkgPath : devPath;
+}
+
+function runWorkerStream({ name, args = [], cwd, env = {}, sender, id }) {
+  const exe = resolveWorker(name);
+  const child = spawn(exe, args, {
+    cwd: cwd ?? scriptsDir,
+    env: { ...process.env, ...env },
+  });
+  running.set(id, child);
+  const ch = (t) => `py:${id}:${t}`;
+  sender.send(ch("start"), { pid: child.pid });
+  child.stdout.on("data", (d) => sender.send(ch("stdout"), d.toString()));
+  child.stderr.on("data", (d) => sender.send(ch("stderr"), d.toString()));
+  return new Promise((resolve, reject) => {
+    child.on("close", (code) => {
+      running.delete(id);
+      sender.send(ch("exit"), code);
+      if (code === 0) resolve();
+      else reject(new Error(`${name} exited with code ${code}`));
+    });
+  });
+}
 
 function terminateProcess(child) {
   return new Promise((resolve) => {
@@ -195,8 +232,8 @@ async function handleRunWeekly(event, payload) {
   await writeDotEnv(apiKey);
   await ensureDocsInputs({ weeklyPath });
 
-  await runPythonStream({
-    entry: "performance_table_update_prices.py",
+  await runWorkerStream({
+    name: "weekly_updater",
     cwd: scriptsDir,
     env: { APP_BASE: projectRoot, DOCS_DIR: docsDir, API_KEY: apiKey },
     sender: event.sender,
@@ -219,8 +256,8 @@ async function handleRunOnchain(event, payload) {
   await writeDotEnv(apiKey);
   await ensureDocsInputs({ monthlyPath });
 
-  await runPythonStream({
-    entry: "onchain.py",
+  await runWorkerStream({
+    name: "monthly_updater",
     cwd: projectRoot,
     env: { APP_BASE: projectRoot, DOCS_DIR: docsDir, API_KEY: apiKey },
     sender: event.sender,

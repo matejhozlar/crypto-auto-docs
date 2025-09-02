@@ -6,11 +6,15 @@ on:
     branches: ["**"]
     paths:
       - "desktop/**"
+      - "scripts/**"
+      - "onchain.py"
       - ".github/workflows/**"
   pull_request:
     branches: ["**"]
     paths:
       - "desktop/**"
+      - "scripts/**"
+      - "onchain.py"
       - ".github/workflows/**"
 
 concurrency:
@@ -36,7 +40,23 @@ jobs:
           cache: "npm"
           cache-dependency-path: desktop/package-lock.json
 
-      - name: Install deps
+      - name: Use Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python deps and build workers (PyInstaller)
+        run: |
+          python -m pip install -U pip wheel
+          python -m pip install pyinstaller
+          if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
+          pyinstaller --onefile --name weekly_updater --collect-all pandas --collect-all openpyxl scripts/performance_table_update_prices.py
+          pyinstaller --onefile --name monthly_updater --collect-all pandas --collect-all openpyxl onchain.py
+          mkdir -p desktop/bin/win
+          mv dist/weekly_updater.exe desktop/bin/win/
+          mv dist/monthly_updater.exe desktop/bin/win/
+
+      - name: Install Node deps
         working-directory: desktop
         run: npm ci
 

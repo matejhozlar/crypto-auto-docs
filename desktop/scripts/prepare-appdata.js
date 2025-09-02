@@ -36,6 +36,7 @@ copyDir(
   path.join(repoRoot, "defillama-slugs"),
   path.join(appdata, "defillama-slugs")
 );
+copyDir(path.join(__dirname, "..", "bin"), path.join(appdata, "bin"));
 
 const onchainSrc = path.join(repoRoot, "onchain.py");
 if (fs.existsSync(onchainSrc)) {

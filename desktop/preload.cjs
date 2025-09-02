@@ -24,5 +24,5 @@ contextBridge.exposeInMainWorld("api", {
   onOnchainStopping: (cb) => sub("py:monthly:stopping", cb),
 
   getSettings: () => ipcRenderer.invoke("settings:get"),
-  setSettings: () => ipcRenderer.invoke("settings:set", patch),
+  setSettings: (patch) => ipcRenderer.invoke("settings:set", patch),
 });
