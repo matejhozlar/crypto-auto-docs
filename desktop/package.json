@@ -3,7 +3,7 @@
   "productName": "Crypto Auto Docs",
   "author": "Matej Hozlar",
   "description": "Electron desktop wrapper for Crypto Auto Docs",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "main.js",
   "type": "module",
   "scripts": {
@@ -11,7 +11,7 @@
     "premake": "node scripts/prepare-appdata.js",
     "start": "electron-forge start",
     "package": "npm run prepackage && electron-forge package",
-    "make": "npm run premake && electron-forge make"
+    "make": "rm -rf out && npm run premake && electron-forge make"
   },
   "keywords": [],
   "license": "ISC",
