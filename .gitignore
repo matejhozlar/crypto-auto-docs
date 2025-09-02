@@ -4,6 +4,7 @@
 /node_modules/
 /desktop/node_modules/
 /desktop/out/
+/desktop/scripts/common/__pycache__/
 /docs/
 
 generate-structure.js
