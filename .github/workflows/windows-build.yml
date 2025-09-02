@@ -1,0 +1,49 @@
+name: Windows build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "desktop/**"
+
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Install deps
+        working-directory: desktop
+        run: npm ci
+
+      - name: Make (Forge → Squirrel)
+        working-directory: desktop
+        run: npm run make
+
+      - name: Upload artifacts (installer, nupkg, RELEASES, zips)
+        uses: actions/upload-artifact@v4
+        with:
+          name: crypto-auto-docs-win
+          path: |
+            desktop/out/make/squirrel.windows/**/RELEASES
+            desktop/out/make/squirrel.windows/**/*.nupkg
+            desktop/out/make/squirrel.windows/**/*.exe
+            desktop/out/make/**/*.zip
