@@ -1,7 +1,7 @@
 from pathlib import Path
 import os
 import shutil
-from common.log import log_ok, log_warn  # no per-file errors logged anymore
+from common.log import log_ok, log_warn  
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 APP_BASE   = Path(os.environ.get("APP_BASE", SCRIPT_DIR.parent)).resolve()
