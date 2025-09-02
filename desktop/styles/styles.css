@@ -158,12 +158,24 @@ body {
 .tile-icon {
   display: inline-grid;
   place-items: center;
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 40px;
   border-radius: 10px;
-  margin-bottom: 10px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
-  font-size: 22px;
+  color: #fff;
+  box-shadow:
+    0 6px 18px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+.tile-icon svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
 }
 .tile h2 {
   margin: 6px 0 4px;
