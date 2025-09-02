@@ -2,6 +2,11 @@ import re
 import sys
 from openpyxl import load_workbook
 
+def log_ok(msg):   print(f"[OK] {msg}",   flush=True)
+def log_info(msg): print(f"[INFO] {msg}", flush=True)
+def log_warn(msg): print(f"[WARN] {msg}", flush=True)
+def log_err(msg):  print(f"[ERR] {msg}",  flush=True)
+
 INPUT_FILE  = "../docs/updated_tvl.xlsx"
 OUTPUT_FILE = "../docs/Weekly_Performance_updated.xlsx"
 SHEET_NAME  = "ONCHAIN"
@@ -37,7 +42,8 @@ def write_row(ws, target_row, row_data, old_row):
 def main():
     wb = load_workbook(INPUT_FILE)
     if SHEET_NAME not in wb.sheetnames:
-        sys.exit(f"❌ Sheet '{SHEET_NAME}' not found")
+        log_err(f"Sheet '{SHEET_NAME}' not found")
+        sys.exit(1)
     ws = wb[SHEET_NAME]
 
     max_row = ws.max_row
@@ -74,10 +80,10 @@ def main():
             dest = s + idx
             write_row(ws, dest, data, orig)
 
-        print(f"🔀 Sorted rows {s}–{e} by TVL")
+        log_ok(f"Sorted rows {s}–{e} by TVL")
 
     wb.save(OUTPUT_FILE)
-    print(f"✅ Saved sorted workbook to {OUTPUT_FILE}")
+    log_ok(f"Saved sorted workbook to {OUTPUT_FILE}")
 
 if __name__ == "__main__":
     main()

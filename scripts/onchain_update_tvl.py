@@ -3,6 +3,11 @@ import time
 import requests
 from openpyxl import load_workbook
 
+def log_ok(msg):   print(f"[OK] {msg}",   flush=True)
+def log_info(msg): print(f"[INFO] {msg}", flush=True)
+def log_warn(msg): print(f"[WARN] {msg}", flush=True)
+def log_err(msg):  print(f"[ERR] {msg}",  flush=True)
+
 INPUT_FILE       = "../docs/updated_prices.xlsx"
 OUTPUT_FILE      = "../docs/updated_tvl.xlsx"
 SHEET_NAME       = "ONCHAIN"
@@ -19,7 +24,8 @@ REQUEST_DELAY    = 1.0
 def fetch(url):
     r = requests.get(url)
     if r.status_code != 200:
-        sys.exit(f"❌ Failed to fetch {url} (HTTP {r.status_code})")
+        log_err(f"Failed to fetch {url} (HTTP {r.status_code})")
+        sys.exit(1)
     return r.json()
 
 def fetch_single_protocol(slug: str) -> dict:
@@ -54,7 +60,8 @@ for c in chains:
 
 wb = load_workbook(INPUT_FILE)
 if SHEET_NAME not in wb.sheetnames:
-    sys.exit(f"❌ Sheet '{SHEET_NAME}' not found in {INPUT_FILE}")
+    log_err(f"Sheet '{SHEET_NAME}' not found in {INPUT_FILE}")
+    sys.exit(1)
 ws = wb[SHEET_NAME]
 
 row = START_ROW
@@ -86,20 +93,20 @@ while empty_count < STOP_EMPTY_LIMIT:
         try:
             data = fetch_single_protocol(slug)
             total_tvl = compute_protocol_tvl(data)
-            print(f"✅ Protocol {symbol:<8} ({slug}) → TVL = ${total_tvl:,.2f}")
+            log_ok(f"Protocol {symbol:<8} ({slug}) → TVL = ${total_tvl:,.2f}")
         except Exception as e:
-            print(f"⚠️ Protocol error for {symbol}/{slug}: {e}")
+            log_warn(f"Protocol error for {symbol}/{slug}: {e}")
 
     elif typ == "chain":
         entry = chain_map.get(slug.upper()) or chain_map.get(symbol.upper())
         if entry:
             total_tvl = entry.get("tvlUsd") or entry.get("tvl") or 0
-            print(f"✅ Chain    {symbol:<8} ({entry['name']}) → TVL = ${total_tvl:,.2f}")
+            log_ok(f"Chain    {symbol:<8} ({entry['name']}) → TVL = ${total_tvl:,.2f}")
         else:
-            print(f"⚠️ Chain not found for slug/symbol '{slug or symbol}'")
+            log_warn(f"Chain not found for slug/symbol '{slug or symbol}'")
 
     else:
-        print(f"⚠️ Row {row}: unknown type '{typ}' or missing slug '{slug}'")
+        log_warn(f"Row {row}: unknown type '{typ}' or missing slug '{slug}'")
 
     if total_tvl and total_tvl > 0:
         tvl_cell.value = round(total_tvl, 2)
@@ -111,4 +118,4 @@ while empty_count < STOP_EMPTY_LIMIT:
 
 
 wb.save(OUTPUT_FILE)
-print("✅ TVL update complete.")
+log_ok("TVL update complete.")

@@ -2,4 +2,7 @@
 /scripts/.env
 /node_modules/
 /desktop/node_modules/
+/desktop/out/
 /docs/
+
+generate-structure.js

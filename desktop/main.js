@@ -10,14 +10,26 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import { spawn, execFileSync } from "child_process";
-import { create } from "domain";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
+if (process.platform === "win32") {
+  if (require("electron-squirrel-startup")) {
+    process.exit(0);
+  }
+}
 
 const running = new Map();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const projectRoot = path.resolve(__dirname, "..");
+const devBase = path.resolve(__dirname, "..");
+const pkgBase = path.join(app.getAppPath(), "appdata");
+
+const base = app.isPackaged ? pkgBase : devBase;
+
+const projectRoot = base;
 const pythonScriptsCwd = projectRoot;
 const docsDir = path.join(projectRoot, "docs");
 const scriptsDir = path.join(projectRoot, "scripts");
