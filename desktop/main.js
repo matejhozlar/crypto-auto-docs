@@ -6,7 +6,7 @@ import {
   nativeTheme,
   Menu,
 } from "electron";
-import path from "path";
+import path, { resolve } from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import { spawn, execFileSync } from "child_process";
@@ -52,6 +52,8 @@ const docsDir = path.join(projectRoot, "docs");
 const scriptsDir = path.join(projectRoot, "scripts");
 
 function resolveWorker(name) {
+  if (!app.isPackaged && !process.env.USE_EXE_IN_DEV) return null;
+
   const binName = process.platform === "win32" ? `${name}.exe` : name;
   const devPath = path.join(
     __dirname,
@@ -65,11 +67,16 @@ function resolveWorker(name) {
     process.platform === "win32" ? "win" : "darwin",
     binName
   );
-  return fs.existsSync(pkgPath) ? pkgPath : devPath;
+  return fs.existsSync(pkgPath)
+    ? pkgPath
+    : fs.existsSync(devPath)
+      ? devPath
+      : null;
 }
 
 function runWorkerStream({ name, args = [], cwd, env = {}, sender, id }) {
   const exe = resolveWorker(name);
+  if (!exe) throw new Error(`Worker not found ${name}`);
   const child = spawn(exe, args, {
     cwd: cwd ?? scriptsDir,
     env: { ...process.env, ...env },
@@ -158,13 +165,40 @@ async function handleRunWeekly(event, payload) {
   await writeDotEnv(apiKey);
   await ensureDocsInputs({ weeklyPath });
 
-  await runWorkerStream({
-    name: "weekly_updater",
-    cwd: scriptsDir,
-    env: { APP_BASE: projectRoot, DOCS_DIR: docsDir, API_KEY: apiKey },
-    sender: event.sender,
-    id: "weekly",
-  });
+  const exe = resolveWorker("weekly_updater");
+  if (exe) {
+    await runWorkerStream({
+      name: "weekly_updater",
+      cwd: scriptsDir,
+      args: [
+        "--input",
+        path.join(docsDir, "Weekly_Performance_PORTFOLIO.xlsx"),
+        "--output",
+        path.join(docsDir, "Weekly_Performance_PORTFOLIO_latest.xlsx"),
+      ],
+      env: { APP_BASE: projectRoot, DOCS_DIR: docsDir, API_KEY: apiKey },
+      sender: event.sender,
+      id: "weekly",
+    });
+  } else {
+    const weeklyPy = path.join(
+      scriptsDir,
+      "performance_table_update_prices.py"
+    );
+    await runPythonStream({
+      entry: weeklyPy,
+      cwd: scriptsDir,
+      args: [
+        "--input",
+        path.join(docsDir, "Weekly_Performance_PORTFOLIO.xlsx"),
+        "--output",
+        path.join(docsDir, "Weekly_Performance_PORTFOLIO_latest.xlsx"),
+      ],
+      env: { APP_BASE: projectRoot, DOCS_DIR: docsDir, API_KEY: apiKey },
+      sender: event.sender,
+      id: "weekly",
+    });
+  }
 
   const output = path.join(docsDir, "Weekly_Performance_PORTFOLIO_latest.xlsx");
   return { outputPath: output, exists: fs.existsSync(output) };
@@ -182,16 +216,81 @@ async function handleRunOnchain(event, payload) {
   await writeDotEnv(apiKey);
   await ensureDocsInputs({ monthlyPath });
 
-  await runWorkerStream({
-    name: "monthly_updater",
-    cwd: projectRoot,
-    env: { APP_BASE: projectRoot, DOCS_DIR: docsDir, API_KEY: apiKey },
-    sender: event.sender,
-    id: "monthly",
-  });
+  const exe = resolveWorker("monthly_updater");
+  if (exe) {
+    await runWorkerStream({
+      name: "monthly_updater",
+      cwd: projectRoot,
+      args: [
+        "--input",
+        path.join(docsDir, "Monthly_Performance_CVR.xlsx"),
+        "--output",
+        path.join(docsDir, "Monthly_Performance_CVR_latest.xlsx"),
+      ],
+      env: { APP_BASE: projectRoot, DOCS_DIR: docsDir, API_KEY: apiKey },
+      sender: event.sender,
+      id: "monthly",
+    });
+  } else {
+    const onchainPy = path.join(projectRoot, "onchain.py");
+    await runPythonStream({
+      entry: onchainPy,
+      cwd: projectRoot,
+      args: [
+        "--input",
+        path.join(docsDir, "Monthly_Performance_CVR.xlsx"),
+        "--output",
+        path.join(docsDir, "Monthly_Performance_CVR_latest.xlsx"),
+      ],
+      env: { APP_BASE: projectRoot, DOCS_DIR: docsDir, API_KEY: apiKey },
+      sender: event.sender,
+      id: "monthly",
+    });
+  }
 
-  const output = path.join(docsDir, "Weekly_Performance_updated.xlsx");
+  const output = path.join(docsDir, "Monthly_Performance_CVR_latest.xlsx");
   return { outputPath: output, exists: fs.existsSync(output) };
+}
+
+function getPythonCmd() {
+  const candidates =
+    process.platform === "win32"
+      ? ["py", "python", "python3"]
+      : ["python3", "python"];
+  for (const c of candidates) {
+    try {
+      execFileSync(c, ["--version"], { stdio: "ignore" });
+      return c;
+    } catch {}
+  }
+  return "python";
+}
+
+function runPythonStream({ entry, args = [], cwd, env = {}, sender, id }) {
+  const py = getPythonCmd();
+  const child = spawn(py, ["-u", entry, ...args], {
+    cwd: cwd ?? scriptsDir,
+    env: {
+      ...process.env,
+      ...env,
+      PYTHONUTF8: "1",
+      PYTHONIOENCODING: "utf-8",
+      PYTHONUNBUFFERED: "1",
+    },
+  });
+  running.set(id, child);
+  const ch = (t) => `py:${id}:${t}`;
+  sender.send(ch("start"), { pid: child.pid });
+  child.stdout.on("data", (d) => sender.send(ch("stdout"), d.toString()));
+  child.stderr.on("data", (d) => sender.send(ch("stderr"), d.toString()));
+  return new Promise((resolve, reject) => {
+    child.on("close", (code) => {
+      running.delete(id);
+      sender.send(ch("exit"), code);
+      if (code === 0) resolve();
+      else reject(new Error(`python exited with code ${code}`));
+    });
+  });
 }
 
 function createWindow() {

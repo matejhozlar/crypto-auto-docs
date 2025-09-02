@@ -3,7 +3,7 @@
   "productName": "Crypto Auto Docs",
   "author": "Matej Hozlar",
   "description": "Electron desktop wrapper for Crypto Auto Docs",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "main": "main.js",
   "type": "module",
   "scripts": {
@@ -11,7 +11,10 @@
     "premake": "node scripts/prepare-appdata.js",
     "start": "electron-forge start",
     "package": "npm run prepackage && electron-forge package",
-    "make": "rm -rf out && npm run premake && electron-forge make"
+    "make": "rm -rf out && npm run premake && electron-forge make",
+    "build:py": "cross-env npm run build:py:monthly && cross-env npm run build:py:weekly",
+    "build:py:monthly": "cross-env-shell \"cd .. && py -m PyInstaller --noconfirm --clean --onefile --name monthly_updater --collect-all pandas --collect-all openpyxl --hidden-import scripts.onchain_rewrite_prices --hidden-import scripts.onchain_update_prices --hidden-import scripts.onchain_update_tvl --hidden-import scripts.onchain_sort_by_tvl --hidden-import scripts.clean_up onchain.py && shx mkdir -p desktop/bin/win && shx mv dist/monthly_updater.exe desktop/bin/win/ && shx rm -rf build dist monthly_updater.spec\"",
+    "build:py:weekly": "cross-env-shell \"cd .. && py -m PyInstaller --noconfirm --clean --onefile --name weekly_updater --collect-all pandas --collect-all openpyxl scripts/performance_table_update_prices.py && shx mkdir -p desktop/bin/win && shx mv dist/weekly_updater.exe desktop/bin/win/ && shx rm -rf build dist weekly_updater.spec\""
   },
   "keywords": [],
   "license": "ISC",
@@ -20,8 +23,10 @@
     "@electron-forge/maker-dmg": "^7.8.3",
     "@electron-forge/maker-squirrel": "^7.8.3",
     "@electron-forge/maker-zip": "^7.8.3",
+    "cross-env": "^10.0.0",
     "electron": "^37.4.0",
-    "electron-icon-builder": "^2.0.1"
+    "electron-icon-builder": "^2.0.1",
+    "shx": "^0.4.0"
   },
   "dependencies": {
     "electron-squirrel-startup": "^1.0.1"

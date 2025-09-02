@@ -1,42 +1,50 @@
 import os
 import sys
 import time
-import subprocess
+import runpy
 from pathlib import Path
-from scripts.common.log import log_ok, log_info, log_warn, log_err
 
-SCRIPT_DELAY = 5  
+BASE = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent))
 
-SCRIPTS = [
-    ("scripts/onchain_rewrite_prices.py", "Rewriting prices…"),
-    ("scripts/onchain_update_prices.py",  "Updating prices…"),
-    ("scripts/onchain_update_tvl.py",     "Updating TVL…"),
-    ("scripts/onchain_sort_by_tvl.py",    "Sorting rows by TVL…"),
-    ("scripts/clean_up.py",               "Cleaning up…"),
+sys.path.insert(0, str(BASE))
+sys.path.insert(0, str(BASE / 'scripts'))
+
+import scripts.onchain_rewrite_prices  
+import scripts.onchain_update_prices   
+import scripts.onchain_update_tvl      
+import scripts.onchain_sort_by_tvl     
+import scripts.clean_up
+
+def log_ok(msg):   print(f"[OK] {msg}",   flush=True)
+def log_info(msg): print(f"[INFO] {msg}", flush=True)
+def log_warn(msg): print(f"[WARN] {msg}", flush=True)
+def log_err(msg):  print(f"[ERR] {msg}",  flush=True)
+
+SCRIPT_DELAY = 5
+
+MODULES = [
+    ("scripts.onchain_rewrite_prices", "Rewriting prices..."),
+    ("scripts.onchain_update_prices",  "Updating prices..."),
+    ("scripts.onchain_update_tvl",     "Updating TVL..."),
+    ("scripts.onchain_sort_by_tvl",    "Sorting rows by TVL..."),
+    ("scripts.clean_up",               "Cleaning up..."),
 ]
 
-def script_label(relpath: str) -> str:
-    """onchain_update_prices.py -> onchain_update_prices"""
-    base = os.path.basename(relpath)
-    return os.path.splitext(base)[0]
-
 def main():
-    for i, (relpath, message) in enumerate(SCRIPTS):
-        script_path = os.path.abspath(relpath)
-        script_dir  = os.path.dirname(script_path)
-        
+    for i, (mod_name, message) in enumerate(MODULES):
         if message:
             log_info(message)
-
-        ret = subprocess.call([sys.executable, script_path], cwd=script_dir)
-
-        if ret != 0:
-            log_err(f"Failed with {ret}")
-            sys.exit(ret)
-
-        if i < len(SCRIPTS) - 1:
+        try:
+            runpy.run_module(mod_name, run_name="__main__")
+        except SystemExit as e:
+            code = e.code if isinstance(e.code, int) else 1
+            log_err(f"Failed with {code}")
+            sys.exit(code)
+        except Exception as e:
+            log_err(f"Failed with {e}")
+            sys.exit(1)
+        if i < len(MODULES) - 1:
             time.sleep(SCRIPT_DELAY)
-
     log_ok("All onchain scripts completed successfully.")
 
 if __name__ == "__main__":

@@ -10,5 +10,8 @@
 /desktop/bin/*
 /desktop/appdata/docs/
 /docs/
+/dist/
+/build/
+tmp.txt
 
 generate-structure.js

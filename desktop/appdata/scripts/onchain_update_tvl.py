@@ -5,7 +5,10 @@ from pathlib import Path
 
 import requests
 from openpyxl import load_workbook
-from common.log import log_ok, log_warn, log_err
+def log_ok(msg):   print(f"[OK] {msg}",   flush=True)
+def log_info(msg): print(f"[INFO] {msg}", flush=True)
+def log_warn(msg): print(f"[WARN] {msg}", flush=True)
+def log_err(msg):  print(f"[ERR] {msg}",  flush=True)
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_DOCS_DIR = (SCRIPT_DIR / ".." / "docs").resolve()  

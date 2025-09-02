@@ -9,7 +9,10 @@ import requests
 from dotenv import load_dotenv
 from openpyxl import load_workbook
 from typing import Optional
-from common.log import log_ok, log_warn, log_err
+def log_ok(msg):   print(f"[OK] {msg}",   flush=True)
+def log_info(msg): print(f"[INFO] {msg}", flush=True)
+def log_warn(msg): print(f"[WARN] {msg}", flush=True)
+def log_err(msg):  print(f"[ERR] {msg}",  flush=True)
 
 SCRIPT_DIR = Path(__file__).resolve().parent              
 ROOT_DIR   = SCRIPT_DIR.parent                            
@@ -128,7 +131,7 @@ def run(input_path: Path, output_path: Path) -> None:
         row += 1
 
     wb.save(str(output_path))
-    log_ok(f"Successfully updated prices in: {output_path}")
+    log_ok(f"Successfully updated prices")
 
 def parse_args():
     p = argparse.ArgumentParser(description="Update yellow prices in PERFORMANCE_TABLE.")

@@ -2,7 +2,10 @@ from pathlib import Path
 from openpyxl import load_workbook
 import os
 import sys
-from common.log import log_ok, log_err
+def log_ok(msg):   print(f"[OK] {msg}",   flush=True)
+def log_info(msg): print(f"[INFO] {msg}", flush=True)
+def log_warn(msg): print(f"[WARN] {msg}", flush=True)
+def log_err(msg):  print(f"[ERR] {msg}",  flush=True)
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 APP_BASE   = Path(os.environ.get("APP_BASE", SCRIPT_DIR.parent)).resolve()    
@@ -14,17 +17,17 @@ SHEET_NAME  = "ONCHAIN"
 STOP_EMPTY_LIMIT = 10
 
 if not INPUT_FILE.exists():
-    log_err(f"Could not find {INPUT_FILE}")
+    log_err(f"File not found")
     sys.exit(1)
 
 try:
     wb = load_workbook(str(INPUT_FILE))
 except Exception as e:
-    log_err(f"Failed to open workbook {INPUT_FILE}: {e}")
+    log_err(f"Failed to open workbook: {e}")
     sys.exit(1)
 
 if SHEET_NAME not in wb.sheetnames:
-    log_err(f"Sheet '{SHEET_NAME}' not found in {INPUT_FILE.name}")
+    log_err(f"Sheet '{SHEET_NAME}' not found")
     sys.exit(1)
 
 ws = wb[SHEET_NAME]

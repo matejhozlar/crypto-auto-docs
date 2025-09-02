@@ -43,9 +43,4 @@ if (fs.existsSync(onchainSrc)) {
   fs.copyFileSync(onchainSrc, path.join(appdata, "onchain.py"));
 }
 
-const envSrc = path.join(repoRoot, ".env");
-if (fs.existsSync(envSrc)) {
-  fs.copyFileSync(envSrc, path.join(appdata, ".env"));
-}
-
 console.log("[prepare-appdata] Copied scripts/docs into desktop/appdata");
