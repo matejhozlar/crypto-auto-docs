@@ -4,6 +4,12 @@ module.exports = {
   packagerConfig: {
     asar: false,
     icon: path.resolve(__dirname, "assets", "icon.ico"),
+    ignore: [
+      /(^|[\\/])\.env$/i,
+      /[\\/]scripts[\\/]\.env$/i,
+      /[\\/]appdata[\\/]\.env$/i,
+      /\.env\.[^\\/]+$/i,
+    ],
     win32metadata: {
       CompanyName: "Matej Hozlar",
       FileDescription: "Crypto Auto Docs",

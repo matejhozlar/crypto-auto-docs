@@ -11,6 +11,24 @@ import { fileURLToPath } from "url";
 import fs from "fs";
 import { spawn, execFileSync } from "child_process";
 import { createRequire } from "module";
+import os from "os";
+
+const settingsFile = () => path.join(app.getPath("userData"), "settings.json");
+
+function loadSettings() {
+  try {
+    return JSON.parse(fs.readFileSync(settingsFile(), "utf8"));
+  } catch {
+    return {};
+  }
+}
+
+function saveSettings(patch = {}) {
+  const next = { ...loadSettings(), ...patch };
+  fs.mkdirSync(path.dirname(settingsFile()), { recursive: true });
+  fs.writeFileSync(settingsFile(), JSON.stringify(next, null, 2));
+  return next;
+}
 
 const require = createRequire(import.meta.url);
 if (process.platform === "win32") {
@@ -167,7 +185,12 @@ async function writeDotEnv(apiKey) {
 }
 
 async function handleRunWeekly(event, payload) {
-  const { apiKey, weeklyPath } = payload;
+  const { apiKey: incomingKey, weeklyPath } = payload;
+  const saved = loadSettings();
+  const apiKey = String(incomingKey || saved.apiKey || "")
+    .trim()
+    .replace(/^['"]|['"]$/g, "");
+  if (incomingKey && incomingKey !== saved.apiKey) saveSettings({ apiKey });
   if (!weeklyPath) throw new Error("Please select the Weekly file.");
   await writeDotEnv(apiKey);
   await ensureDocsInputs({ weeklyPath });
@@ -175,6 +198,7 @@ async function handleRunWeekly(event, payload) {
   await runPythonStream({
     entry: "performance_table_update_prices.py",
     cwd: scriptsDir,
+    env: { APP_BASE: projectRoot, DOCS_DIR: docsDir, API_KEY: apiKey },
     sender: event.sender,
     id: "weekly",
   });
@@ -184,17 +208,23 @@ async function handleRunWeekly(event, payload) {
 }
 
 async function handleRunOnchain(event, payload) {
-  const { apiKey, monthlyPath, weeklyPath } = payload;
-  if (!monthlyPath || !weeklyPath)
-    throw new Error("Please select both Monthly and Weekly files.");
+  const { apiKey: incomingKey, monthlyPath } = payload;
+  const saved = loadSettings();
+  const apiKey = String(incomingKey || saved.apiKey || "")
+    .trim()
+    .replace(/^['"]|['"]$/g, "");
+  if (incomingKey && incomingKey !== saved.apiKey) saveSettings({ apiKey });
+  if (!monthlyPath) throw new Error("Please select the Monthly file.");
+
   await writeDotEnv(apiKey);
-  await ensureDocsInputs({ monthlyPath, weeklyPath });
+  await ensureDocsInputs({ monthlyPath });
 
   await runPythonStream({
     entry: "onchain.py",
     cwd: projectRoot,
+    env: { APP_BASE: projectRoot, DOCS_DIR: docsDir, API_KEY: apiKey },
     sender: event.sender,
-    id: "onchain",
+    id: "monthly",
   });
 
   const output = path.join(docsDir, "Weekly_Performance_updated.xlsx");
@@ -242,7 +272,9 @@ app.whenReady().then(() => {
     return res.canceled ? null : res.filePaths[0] || null;
   });
 
-  ipcMain.handle("run-onchain", handleRunOnchain);
+  ipcMain.handle("settings:get", () => loadSettings());
+  ipcMain.handle("settings:set", (_e, patch) => saveSettings(patch));
+  ipcMain.handle("run-monthly", handleRunOnchain);
   ipcMain.handle("run-weekly", handleRunWeekly);
   ipcMain.handle("stop-run", async (event, { id }) => {
     const child = running.get(id);

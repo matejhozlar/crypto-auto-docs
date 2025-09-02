@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 from __future__ import annotations
 
 import os
@@ -10,11 +9,7 @@ import requests
 from dotenv import load_dotenv
 from openpyxl import load_workbook
 from typing import Optional
-
-def log_ok(msg):   print(f"[OK] {msg}",   flush=True)
-def log_info(msg): print(f"[INFO] {msg}", flush=True)
-def log_warn(msg): print(f"[WARN] {msg}", flush=True)
-def log_err(msg):  print(f"[ERR] {msg}",  flush=True)
+from common.log import log_ok, log_warn, log_err
 
 SCRIPT_DIR = Path(__file__).resolve().parent              
 ROOT_DIR   = SCRIPT_DIR.parent                            
@@ -60,7 +55,6 @@ def _color_hex6(fg) -> Optional[str]:
     return None
 
 def is_yellow(cell) -> bool:
-    """Detect Excel yellow cells robustly."""
     fill = getattr(cell, "fill", None)
     if not fill or getattr(fill, "fill_type", None) != "solid":
         return False
@@ -91,11 +85,11 @@ def run(input_path: Path, output_path: Path) -> None:
         raise SystemExit("API_KEY is missing. Put it in .env at repo root or scripts/.")
 
     if not input_path.exists():
-        raise SystemExit(f"Input file not found: {input_path}")
+        raise SystemExit(f"Input file not found")
 
     wb = load_workbook(str(input_path))
     if SHEET_NAME not in wb.sheetnames:
-        raise SystemExit(f"Sheet '{SHEET_NAME}' not found in {input_path.name}")
+        raise SystemExit(f"Sheet '{SHEET_NAME}' not found")
     ws = wb[SHEET_NAME]
 
     row = START_ROW

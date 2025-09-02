@@ -5,11 +5,7 @@ import sys
 import time
 import requests
 from openpyxl import load_workbook
-
-def log_ok(msg):   print(f"[OK] {msg}",   flush=True)
-def log_info(msg): print(f"[INFO] {msg}", flush=True)
-def log_warn(msg): print(f"[WARN] {msg}", flush=True)
-def log_err(msg):  print(f"[ERR] {msg}",  flush=True)
+from common.log import log_ok, log_info, log_warn, log_err
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 APP_BASE   = Path(os.environ.get("APP_BASE", SCRIPT_DIR.parent)).resolve()  
@@ -57,12 +53,12 @@ for entry in cmc_map:
         symbol_map.setdefault(sym, []).append(entry)
 
 if not INPUT_FILE.exists():
-    log_err(f"Input file not found: {INPUT_FILE}")
+    log_err(f"Input file not found")
     sys.exit(1)
 
 wb = load_workbook(str(INPUT_FILE))
 if SHEET_NAME not in wb.sheetnames:
-    log_err(f"Sheet '{SHEET_NAME}' not found in {INPUT_FILE.name}")
+    log_err(f"Sheet '{SHEET_NAME}' not found")
     sys.exit(1)
 ws = wb[SHEET_NAME]
 

@@ -3,18 +3,22 @@ let state = {
   mode: null,
   weeklyPath: "",
   monthlyPath: "",
-  monthlyWeeklyPath: "",
   running: false,
 };
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
-window.addEventListener("DOMContentLoaded", () => {
+window.addEventListener("DOMContentLoaded", async () => {
   setTimeout(() => {
     $("#splash").classList.add("hidden");
     $("#app").classList.remove("hidden");
-  }, 5000);
+  }, 500);
+
+  try {
+    const s = await window.api.getSettings();
+    state.apiKey = s?.apiKey || "";
+  } catch {}
 
   wireTiles();
   wireModal();
@@ -77,16 +81,6 @@ function wireModal() {
     }
   });
 
-  $("#pickMonthlyWeekly").addEventListener("click", async () => {
-    const p = await window.api.pickFile(
-      "Choose Weekly_Performance_PORTFOLIO.xlsx"
-    );
-    if (p) {
-      state.monthlyWeeklyPath = p;
-      $("#monthlyWeeklyPath").value = p;
-    }
-  });
-
   $("#modalStart").addEventListener("click", startRunFromModal);
 }
 
@@ -96,11 +90,14 @@ function closeModal() {
 
 async function startRunFromModal() {
   state.apiKey = $("#apiKey").value.trim();
-
   if (!state.apiKey) {
     alert("Please enter your CoinMarketCap API key.");
     return;
   }
+
+  try {
+    await window.api.setSettings({ apiKey: state.apiKey });
+  } catch {}
 
   if (state.mode === "weekly") {
     if (!state.weeklyPath) {
@@ -108,8 +105,8 @@ async function startRunFromModal() {
       return;
     }
   } else {
-    if (!state.monthlyPath || !state.monthlyWeeklyPath) {
-      alert("Please choose both Monthly and Weekly files.");
+    if (!state.monthlyPath) {
+      alert("Please choose the Monthly file.");
       return;
     }
   }
@@ -254,9 +251,7 @@ function wireLiveLogs() {
       updateRunStatus(code === 0 ? "ok" : "err");
     });
     if (window.api.onWeeklyStopping) {
-      window.api.onWeeklyStopping(() => {
-        setStatus("Stopping…");
-      });
+      window.api.onWeeklyStopping(() => setStatus("Stopping…"));
     }
   }
   if (window.api.onOnchainStdout) {
@@ -267,9 +262,7 @@ function wireLiveLogs() {
       updateRunStatus(code === 0 ? "ok" : "err");
     });
     if (window.api.onOnchainStopping) {
-      window.api.onOnchainStopping(() => {
-        setStatus("Stopping…");
-      });
+      window.api.onOnchainStopping(() => setStatus("Stopping…"));
     }
   }
 }
@@ -307,7 +300,6 @@ async function runOnchain() {
     const res = await window.api.runOnchain({
       apiKey: state.apiKey,
       monthlyPath: state.monthlyPath,
-      weeklyPath: state.monthlyWeeklyPath,
     });
     if (res && res.exists) {
       const a = $("#download");

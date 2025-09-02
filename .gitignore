@@ -1,5 +1,6 @@
 .env
 /scripts/.env
+/scripts/common/__pycache__/
 /node_modules/
 /desktop/node_modules/
 /desktop/out/

@@ -1,14 +1,10 @@
 from pathlib import Path
 import os
-import sys
-
-def log_ok(msg):   print(f"[OK] {msg}",   flush=True)
-def log_info(msg): print(f"[INFO] {msg}", flush=True)
-def log_warn(msg): print(f"[WARN] {msg}", flush=True)
-def log_err(msg):  print(f"[ERR] {msg}",  flush=True)
+import shutil
+from common.log import log_ok, log_warn  # no per-file errors logged anymore
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-APP_BASE   = Path(os.environ.get("APP_BASE", SCRIPT_DIR.parent)).resolve()    
+APP_BASE   = Path(os.environ.get("APP_BASE", SCRIPT_DIR.parent)).resolve()
 DOCS_DIR   = Path(os.environ.get("DOCS_DIR", APP_BASE / "docs")).resolve()
 
 FILES_TO_DELETE = [
@@ -18,24 +14,23 @@ FILES_TO_DELETE = [
 ]
 
 def main():
-    for path in FILES_TO_DELETE:
-        p = Path(path)
+    failed = False
+
+    for p in FILES_TO_DELETE:
         try:
-            p.unlink()
-            log_ok(f"Deleted: {p}")
-        except FileNotFoundError:
-            log_warn(f"Not found (skipped): {p}")
-        except PermissionError:
-            log_err(f"Permission denied: {p}")
+            Path(p).unlink(missing_ok=True)  
         except IsADirectoryError:
             try:
-                import shutil
-                shutil.rmtree(p)
-                log_ok(f"Deleted directory: {p}")
-            except Exception as e:
-                log_err(f"Error deleting directory {p}: {e}")
-        except Exception as e:
-            log_err(f"Error deleting {p}: {e}")
+                shutil.rmtree(p, ignore_errors=False)
+            except Exception:
+                failed = True
+        except Exception:
+            failed = True
+
+    if failed:
+        log_warn("Some cache files could not be removed. This can be ignored.")
+    else:
+        log_ok("Cache files cleared.")
 
 if __name__ == "__main__":
     main()

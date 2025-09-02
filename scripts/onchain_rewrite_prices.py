@@ -2,11 +2,7 @@ from pathlib import Path
 from openpyxl import load_workbook
 import os
 import sys
-
-def log_ok(msg):   print(f"[OK] {msg}",   flush=True)
-def log_info(msg): print(f"[INFO] {msg}", flush=True)
-def log_warn(msg): print(f"[WARN] {msg}", flush=True)
-def log_err(msg):  print(f"[ERR] {msg}",  flush=True)
+from common.log import log_ok, log_err
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 APP_BASE   = Path(os.environ.get("APP_BASE", SCRIPT_DIR.parent)).resolve()    

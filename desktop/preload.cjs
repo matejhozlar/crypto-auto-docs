@@ -8,7 +8,7 @@ function sub(ch, cb) {
 
 contextBridge.exposeInMainWorld("api", {
   pickFile: (title) => ipcRenderer.invoke("pick-file", { title }),
-  runOnchain: (p) => ipcRenderer.invoke("run-onchain", p),
+  runOnchain: (p) => ipcRenderer.invoke("run-monthly", p),
   runWeekly: (p) => ipcRenderer.invoke("run-weekly", p),
 
   stopRun: (id) => ipcRenderer.invoke("stop-run", { id }),
@@ -16,10 +16,13 @@ contextBridge.exposeInMainWorld("api", {
   onWeeklyStdout: (cb) => sub("py:weekly:stdout", cb),
   onWeeklyStderr: (cb) => sub("py:weekly:stderr", cb),
   onWeeklyExit: (cb) => sub("py:weekly:exit", cb),
-  onOnchainStdout: (cb) => sub("py:onchain:stdout", cb),
-  onOnchainStderr: (cb) => sub("py:onchain:stderr", cb),
-  onOnchainExit: (cb) => sub("py:onchain:exit", cb),
+  onOnchainStdout: (cb) => sub("py:monthly:stdout", cb),
+  onOnchainStderr: (cb) => sub("py:monthly:stderr", cb),
+  onOnchainExit: (cb) => sub("py:monthly:exit", cb),
 
   onWeeklyStopping: (cb) => sub("py:weekly:stopping", cb),
-  onOnchainStopping: (cb) => sub("py:onchain:stopping", cb),
+  onOnchainStopping: (cb) => sub("py:monthly:stopping", cb),
+
+  getSettings: () => ipcRenderer.invoke("settings:get"),
+  setSettings: () => ipcRenderer.invoke("settings:set", patch),
 });
