@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 from __future__ import annotations
 
 import os
@@ -60,7 +59,6 @@ def _color_hex6(fg) -> Optional[str]:
     return None
 
 def is_yellow(cell) -> bool:
-    """Detect Excel yellow cells robustly."""
     fill = getattr(cell, "fill", None)
     if not fill or getattr(fill, "fill_type", None) != "solid":
         return False
