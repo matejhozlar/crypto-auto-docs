@@ -163,7 +163,7 @@ From the GUI you can:
 
 ## Data Sources
 
-- **CoinGecko API** → token prices.
+- **CoinMarketCap API** → token prices.
 - **DefiLlama API** → TVL, protocols, and chains.
 - **defillama-slugs/** → JSON mappings (`chains.json`, `protocols.json`, `defillama_symbol_to_slug.json`) ensure consistent identifiers.
 
