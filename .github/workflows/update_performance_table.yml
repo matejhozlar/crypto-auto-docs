@@ -1,0 +1,80 @@
+name: Update Performance Table
+
+on:
+  schedule:
+    - cron: "0 4 * * 1"
+  workflow_dispatch: {}
+
+jobs:
+  update-table:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Europe/Prague
+      RCLONE_REMOTE: ${{ vars.RCLONE_REMOTE }}
+      FILE_PATH: ${{ vars.FILE_PATH }}
+      BACKUP_PATH: ${{ vars.BACKUP_PATH }}
+      OUTPUT_FILENAME: ${{ vars.OUTPUT_FILENAME }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install rclone
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rclone
+
+      - name: Configure rclone
+        env:
+          RCLONE_CONF: ${{ secrets.RCLONE_CONF }}
+        run: |
+          mkdir -p ~/.config/rclone
+          echo "$RCLONE_CONF" > ~/.config/rclone/rclone.conf
+
+      - name: Download the current Excel file from Google Drive
+        run: |
+          mkdir -p workdir
+          rclone copy "$RCLONE_REMOTE:$FILE_PATH" workdir/ --progress
+
+      - name: Run the price‑update script
+        env:
+          API_KEY: ${{ secrets.CMC_API_KEY }}
+        run: |
+          INPUT_FILE=$(basename "$FILE_PATH")
+          python scripts/performance_table_update_prices.py \
+            --input "workdir/$INPUT_FILE" \
+            --output "workdir/$OUTPUT_FILENAME"
+
+      - name: Upload updated file and backup old version
+        run: |
+          DATE_SUFFIX=$(date +'%d-%m-%Y')
+          # Copy the new file over the old file, backing up the existing file
+          rclone copyto "workdir/$OUTPUT_FILENAME" \
+            "$RCLONE_REMOTE:$FILE_PATH" \
+            --backup-dir "$RCLONE_REMOTE:$BACKUP_PATH" \
+            --suffix "-$DATE_SUFFIX" \
+            --suffix-keep-extension \
+            --progress
+
+      - name: Trim backup folder to latest 4 files
+        run: |
+          # List files in backup directory sorted by modification time (oldest first)
+          FILES=$(rclone lsl "$RCLONE_REMOTE:$BACKUP_PATH" --max-depth 1 \
+                  | sort -k2,2 -k3,3 \
+                  | awk '{print $4}')
+          COUNT=$(echo "$FILES" | wc -l)
+          if [ "$COUNT" -gt 4 ]; then
+            TO_DELETE=$(echo "$FILES" | head -n $(($COUNT - 4)))
+            for f in $TO_DELETE; do
+              echo "Deleting old backup: $f"
+              rclone delete "$RCLONE_REMOTE:$BACKUP_PATH/$f"
+            done
+          fi
