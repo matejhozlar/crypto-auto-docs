@@ -26,14 +26,76 @@ API_KEY = os.getenv("API_KEY")
 CMC_URL  = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest"
 HEADERS  = {"X-CMC_PRO_API_KEY": API_KEY}
 
-SHEET_NAME       = "PERFORMANCE_TABLE"
-START_ROW        = 2
-SYMBOL_COL       = "C"
-PRICE_COL        = "E"
-STOP_EMPTY_LIMIT = 10
-REQUEST_DELAY    = 2.1 
+SHEET_NAME              = "PERFORMANCE_TABLE"
+START_ROW               = 2
+SYMBOL_COL              = "C"
+PRICE_COL               = "E"
+UPDATE_NOTE_COL         = "G"
+UPDATE_NOTE_EMPTY_BELOW = 5
+STOP_EMPTY_LIMIT        = 10
+REQUEST_DELAY           = 2.1 
 
 YELLOW_RGB = "FFFF00"
+
+def _is_empty_value(v) -> bool:
+    return v is None or (isinstance(v, str) and v.strip() == "")
+
+
+def _ordinal(n: int) -> str:
+    if 11 <= (n % 100) <= 13:
+        suf = "th"
+    else:
+        suf = {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+    return f"{n}{suf}"
+
+
+def _format_update_date_struct(t_struct: time.struct_time | None = None) -> str:
+    if t_struct is None:
+        try:
+            if "TZ" in os.environ and hasattr(time, "tzset"):
+                time.tzset()
+        except Exception:
+            pass
+        t_struct = time.localtime()
+
+    month = time.strftime("%B", t_struct)
+    day = t_struct.tm_mday
+    year = t_struct.tm_year
+    return f"{month} {_ordinal(day)}, {year}"
+
+
+def _find_or_insertion_row_for_update_note(ws, col: str = UPDATE_NOTE_COL, empties_below: int = UPDATE_NOTE_EMPTY_BELOW) -> int:
+    maxr = ws.max_row + 10
+
+    for r in range(1, maxr + 1):
+        v = ws[f"{col}{r}"].value
+        if isinstance(v, str) and v.strip().lower().startswith("source:"):
+            ok = True
+            for k in range(1, empties_below + 1):
+                vv = ws[f"{col}{r + k}"].value
+                if not _is_empty_value(vv):
+                    ok = False
+                    break
+            if ok:
+                return r
+
+    for r in range(1, maxr + 1):
+        if _is_empty_value(ws[f"{col}{r}"].value):
+            ok = True
+            for k in range(1, empties_below + 1):
+                if not _is_empty_value(ws[f"{col}{r + k}"].value):
+                    ok = False
+                    break
+            if ok:
+                return r
+
+    return ws.max_row + 1
+
+
+def update_last_update_note(ws) -> None:
+    row = _find_or_insertion_row_for_update_note(ws, UPDATE_NOTE_COL, UPDATE_NOTE_EMPTY_BELOW)
+    note = f"Source: altFINS (Last update: {_format_update_date_struct()})"
+    ws[f"{UPDATE_NOTE_COL}{row}"].value = note
 
 def _color_hex6(fg) -> Optional[str]:
     if not fg:
@@ -129,6 +191,7 @@ def run(input_path: Path, output_path: Path) -> None:
                 time.sleep(REQUEST_DELAY)
 
         row += 1
+    update_last_update_note(ws)
 
     wb.save(str(output_path))
     log_ok(f"Successfully updated prices")
