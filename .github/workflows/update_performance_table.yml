@@ -39,12 +39,16 @@ jobs:
           mkdir -p ~/.config/rclone
           echo "$RCLONE_CONF" > ~/.config/rclone/rclone.conf
 
+      - name: Ensure backup folder exists
+        run: |
+          rclone mkdir "$RCLONE_REMOTE:$BACKUP_PATH" || true
+
       - name: Download the current Excel file from Google Drive
         run: |
           mkdir -p workdir
           rclone copy "$RCLONE_REMOTE:$FILE_PATH" workdir/ --progress
 
-      - name: Run the price‑update script
+      - name: Run the price-update script
         env:
           API_KEY: ${{ secrets.CMC_API_KEY }}
         run: |
@@ -53,23 +57,33 @@ jobs:
             --input "workdir/$INPUT_FILE" \
             --output "workdir/$OUTPUT_FILENAME"
 
-      - name: Upload updated file and backup old version
+      - name: Rotate old _latest.xlsx into dated backup and upload new one
         run: |
+          set -e
           DATE_SUFFIX=$(date +'%d-%m-%Y')
-          # Copy the new file over the old file, backing up the existing file
-          rclone copyto "workdir/$OUTPUT_FILENAME" \
-            "$RCLONE_REMOTE:$FILE_PATH" \
-            --backup-dir "$RCLONE_REMOTE:$BACKUP_PATH" \
-            --suffix "-$DATE_SUFFIX" \
-            --suffix-keep-extension \
-            --progress
 
-      - name: Trim backup folder to latest 4 files
+          FNAME=$(basename "$FILE_PATH")
+          STEM="${FNAME%_latest.xlsx}"   # e.g., Weekly_Performance_PORTFOLIO
+
+          # If a _latest.xlsx exists in Drive, move it into Backups as STEM_dd-mm-YYYY.xlsx
+          if rclone ls "$RCLONE_REMOTE:$FILE_PATH" > /dev/null 2>&1; then
+            rclone moveto "$RCLONE_REMOTE:$FILE_PATH" \
+              "$RCLONE_REMOTE:${BACKUP_PATH}/${STEM}_${DATE_SUFFIX}.xlsx"
+          fi
+
+          # Upload the updated file as the new _latest.xlsx
+          rclone copyto "workdir/$OUTPUT_FILENAME" "$RCLONE_REMOTE:$FILE_PATH" --progress
+
+      - name: Trim backup folder to latest 4 files (dated backups only)
         run: |
-          # List files in backup directory sorted by modification time (oldest first)
+          FNAME=$(basename "$FILE_PATH")
+          STEM="${FNAME%_latest.xlsx}"
+
           FILES=$(rclone lsl "$RCLONE_REMOTE:$BACKUP_PATH" --max-depth 1 \
+                  --include "${STEM}_*.xlsx" \
                   | sort -k2,2 -k3,3 \
                   | awk '{print $4}')
+
           COUNT=$(echo "$FILES" | wc -l)
           if [ "$COUNT" -gt 4 ]; then
             TO_DELETE=$(echo "$FILES" | head -n $(($COUNT - 4)))
