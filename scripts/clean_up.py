@@ -14,6 +14,8 @@ FILES_TO_DELETE = [
     DOCS_DIR / "updated_file.xlsx",
     DOCS_DIR / "updated_prices.xlsx",
     DOCS_DIR / "updated_tvl.xlsx",
+    DOCS_DIR / "sorted_tvl.xlsx",
+    DOCS_DIR / "sorted_tvl.xlsx.bak"
 ]
 
 def main():
@@ -33,7 +35,7 @@ def main():
     if failed:
         log_warn("Some cache files could not be removed. This can be ignored.")
     else:
-        log_ok("Cache files cleared.")
+        log_ok("Cache files cleared successfully.")
 
 if __name__ == "__main__":
     main()

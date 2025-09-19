@@ -128,4 +128,4 @@ while empty_count < STOP_EMPTY_LIMIT:
 
 OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
 wb.save(str(OUTPUT_FILE))
-log_ok(f"TVL update complete")
+log_ok(f"TVL update completed successfully.")
