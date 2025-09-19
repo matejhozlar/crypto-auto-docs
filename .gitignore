@@ -7,6 +7,7 @@
 /desktop/out/
 /desktop/appdata/scripts/common/__pycache__/
 /desktop/scripts/common/__pycache__/
+/desktop/scripts/__pycache__/
 /desktop/appdata/bin/*
 /desktop/bin/*
 /desktop/appdata/docs/

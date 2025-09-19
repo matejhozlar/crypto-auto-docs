@@ -10,6 +10,13 @@ PYTHONPATH = os.pathsep.join(
     [str(BASE), str(BASE / "scripts"), os.environ.get("PYTHONPATH", "")]
 )
 
+import scripts.clean_up
+import scripts.onchain_rewrite_prices
+import scripts.onchain_sort_by_tvl
+import scripts.onchain_update_prices
+import scripts.onchain_validate_tvl
+import scripts.onchain_update_tvl
+
 def log_ok(msg):   print(f"[OK] {msg}",   flush=True)
 def log_info(msg): print(f"[INFO] {msg}", flush=True)
 def log_warn(msg): print(f"[WARN] {msg}", flush=True)

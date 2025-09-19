@@ -13,7 +13,7 @@ APP_BASE   = Path(os.environ.get("APP_BASE", SCRIPT_DIR.parent)).resolve()
 DOCS_DIR   = Path(os.environ.get("DOCS_DIR", APP_BASE / "docs")).resolve()
 
 INPUT_FILE  = DOCS_DIR / "updated_tvl.xlsx"
-OUTPUT_FILE = DOCS_DIR / "Weekly_Performance_updated.xlsx"
+OUTPUT_FILE = DOCS_DIR / "sorted_tvl.xlsx"
 SHEET_NAME  = "ONCHAIN"
 START_ROW   = 4
 TVL_COL     = "O"
@@ -93,7 +93,7 @@ def main():
 
     OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     wb.save(str(OUTPUT_FILE))
-    log_ok(f"Successfully sorted by TVL")
+    log_ok(f"TVL sorting completed successfully.")
 
 if __name__ == "__main__":
     main()
