@@ -103,7 +103,7 @@ while empty_count < STOP_EMPTY_LIMIT:
         try:
             data = fetch_single_protocol(slug)
             total_tvl = compute_protocol_tvl(data)
-            log_ok(f"Protocol {symbol:<8} ({slug}) → TVL = ${total_tvl:,.2f}")
+            log_ok(f"Protocol {symbol:<8} ({slug}) - TVL = ${total_tvl:,.2f}")
         except Exception as e:
             log_warn(f"Protocol error for {symbol}/{slug}: {e}")
 
@@ -111,7 +111,7 @@ while empty_count < STOP_EMPTY_LIMIT:
         entry = chain_map.get(slug.upper()) or chain_map.get(symbol.upper())
         if entry:
             total_tvl = entry.get("tvlUsd") or entry.get("tvl") or 0
-            log_ok(f"Chain    {symbol:<8} ({entry.get('name','?')}) → TVL = ${total_tvl:,.2f}")
+            log_ok(f"Chain    {symbol:<8} ({entry.get('name','?')}) - TVL = ${total_tvl:,.2f}")
         else:
             log_warn(f"Chain not found for slug/symbol '{slug or symbol}'")
 

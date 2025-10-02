@@ -15,7 +15,8 @@ FILES_TO_DELETE = [
     DOCS_DIR / "updated_prices.xlsx",
     DOCS_DIR / "updated_tvl.xlsx",
     DOCS_DIR / "sorted_tvl.xlsx",
-    DOCS_DIR / "sorted_tvl.xlsx.bak"
+    DOCS_DIR / "sorted_tvl.xlsx.bak",
+    DOCS_DIR / "validated.xlsx",
 ]
 
 def main():

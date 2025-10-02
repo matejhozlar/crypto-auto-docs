@@ -47,7 +47,7 @@ def fetch(url, params=None):
         log_err(f"CMC request failed for {url}: {e}")
         sys.exit(1)
 
-log_info("Fetching CMC mapping…")
+log_info("Fetching CMC mapping...")
 cmc_map = fetch(CMC_MAP_URL).get("data", [])
 symbol_map = {}
 for entry in cmc_map:

@@ -17,7 +17,7 @@ APP_BASE   = Path(os.environ.get("APP_BASE", SCRIPT_DIR.parent)).resolve()
 DOCS_DIR   = Path(os.environ.get("DOCS_DIR", APP_BASE / "docs")).resolve()
 
 INPUT_FILE   = DOCS_DIR / "sorted_tvl.xlsx"
-OUTPUT_FILE  = DOCS_DIR / "Monthly_Performance_CVR_latest.xlsx"
+OUTPUT_FILE  = DOCS_DIR / "validated.xlsx"
 SHEET_NAME   = "ONCHAIN"
 
 START_ROW          = 4
