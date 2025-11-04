@@ -1,0 +1,94 @@
+name: Update Monthly CVR
+
+on:
+  schedule:
+    - cron: "0 4 1 * *"
+  workflow_dispatch: {}
+
+jobs:
+  update-table:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Europe/Prague
+      RCLONE_REMOTE: ${{ vars.RCLONE_REMOTE }}
+      MONTHLY_FILE_PATH: ${{ vars.MONTHLY_FILE_PATH }}
+      MONTHLY_BACKUP_PATH: ${{ vars.MONTHLY_BACKUP_PATH }}
+      MONTHLY_OUTPUT_FILENAME: ${{ vars.MONTHLY_OUTPUT_FILENAME }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install rclone
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rclone
+
+      - name: Configure rclone
+        env:
+          RCLONE_CONF: ${{ secrets.RCLONE_CONF }}
+        run: |
+          mkdir -p ~/.config/rclone
+          echo "$RCLONE_CONF" > ~/.config/rclone/rclone.conf
+
+      - name: Ensure backup folder exists
+        run: |
+          rclone mkdir "$RCLONE_REMOTE:$MONTHLY_BACKUP_PATH" || true
+
+      - name: Download the current Excel file from Google Drive
+        run: |
+          mkdir -p workdir
+          rclone copy "$RCLONE_REMOTE:$MONTHLY_FILE_PATH" workdir/ --progress
+
+      - name: Run onchain.py to update the monthly file
+        env:
+          API_KEY: ${{ secrets.CMC_API_KEY }}
+        run: |
+          INPUT_FILE=$(basename "$MONTHLY_FILE_PATH")
+          python onchain.py \
+            --input "workdir/$INPUT_FILE" \
+            --output "workdir/$MONTHLY_OUTPUT_FILENAME"
+
+      - name: Rotate old _latest.xlsx into dated backup and upload new one
+        run: |
+          set -e
+          DATE_SUFFIX=$(date +'%d-%m-%Y')
+
+          FNAME=$(basename "$MONTHLY_FILE_PATH")
+          STEM="${FNAME%_latest.xlsx}"   # e.g., Monthly_Performance_PORTFOLIO
+
+          # If a _latest.xlsx exists in Drive, move it into Backups as STEM_dd-mm-YYYY.xlsx
+          if rclone ls "$RCLONE_REMOTE:$MONTHLY_FILE_PATH" > /dev/null 2>&1; then
+            rclone moveto "$RCLONE_REMOTE:$MONTHLY_FILE_PATH" \
+              "$RCLONE_REMOTE:${MONTHLY_BACKUP_PATH}/${STEM}_${DATE_SUFFIX}.xlsx"
+          fi
+
+          # Upload the updated file as the new _latest.xlsx
+          rclone copyto "workdir/$MONTHLY_OUTPUT_FILENAME" "$RCLONE_REMOTE:$MONTHLY_FILE_PATH" --progress
+
+      - name: Trim backup folder to latest 12 files (dated backups only)
+        run: |
+          FNAME=$(basename "$MONTHLY_FILE_PATH")
+          STEM="${FNAME%_latest.xlsx}"
+
+          FILES=$(rclone lsl "$RCLONE_REMOTE:$MONTHLY_BACKUP_PATH" --max-depth 1 \
+                  --include "${STEM}_*.xlsx" \
+                  | sort -k2,2 -k3,3 \
+                  | awk '{print $4}')
+
+          COUNT=$(echo "$FILES" | wc -l)
+          if [ "$COUNT" -gt 12 ]; then
+            TO_DELETE=$(echo "$FILES" | head -n $(($COUNT - 12)))
+            for f in $TO_DELETE; do
+              echo "Deleting old backup: $f"
+              rclone delete "$RCLONE_REMOTE:$MONTHLY_BACKUP_PATH/$f"
+            done
+          fi
