@@ -1,4 +1,4 @@
-name: Update Performance Table (Monthly)
+name: Update Monthly CVR
 
 on:
   schedule:
