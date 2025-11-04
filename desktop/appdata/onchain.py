@@ -20,12 +20,13 @@ def log_err(msg):  print(f"[ERR] {msg}",  flush=True)
 SCRIPT_DELAY = 3
 
 MODULES = [
+    ("scripts.onchain_update_date",    "Updating date..."),
     ("scripts.onchain_rewrite_prices", "Rewriting prices..."),
     ("scripts.onchain_update_prices",  "Updating prices..."),
     ("scripts.onchain_update_tvl",     "Updating TVL..."),
     ("scripts.onchain_sort_by_tvl",    "Sorting rows by TVL..."),
     ("scripts.onchain_validate_tvl",   "Validating TVL..."),
-    ("scripts.onchain_sort_charts",     "Sorting charts..."),
+    ("scripts.onchain_sort_charts",    "Sorting charts..."),
     ("scripts.clean_up",               "Cleaning up..."),
 ]
 
