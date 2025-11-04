@@ -1,4 +1,4 @@
-name: Update Monthly CVR
+name: Update Performance Table (Monthly)
 
 on:
   schedule:
@@ -51,11 +51,20 @@ jobs:
       - name: Run onchain.py to update the monthly file
         env:
           API_KEY: ${{ secrets.CMC_API_KEY }}
+          DOCS_DIR: ${{ github.workspace }}/workdir
         run: |
           INPUT_FILE=$(basename "$MONTHLY_FILE_PATH")
-          python onchain.py \
-            --input "workdir/$INPUT_FILE" \
-            --output "workdir/$MONTHLY_OUTPUT_FILENAME"
+
+          # Copy the input file to the expected name in workdir
+          cp "workdir/$INPUT_FILE" "workdir/Monthly_Performance_CVR_latest.xlsx"
+
+          # Run onchain.py (it will look for files in DOCS_DIR)
+          python onchain.py
+
+          # If output filename is different, rename it
+          if [ "$MONTHLY_OUTPUT_FILENAME" != "Monthly_Performance_CVR_latest.xlsx" ]; then
+            mv "workdir/Monthly_Performance_CVR_latest.xlsx" "workdir/$MONTHLY_OUTPUT_FILENAME"
+          fi
 
       - name: Rotate old _latest.xlsx into dated backup and upload new one
         run: |
