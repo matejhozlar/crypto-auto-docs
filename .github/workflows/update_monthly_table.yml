@@ -55,8 +55,10 @@ jobs:
         run: |
           INPUT_FILE=$(basename "$MONTHLY_FILE_PATH")
 
-          # Copy the input file to the expected name in workdir
-          cp "workdir/$INPUT_FILE" "workdir/Monthly_Performance_CVR_latest.xlsx"
+          # Copy the input file to the expected name in workdir (only if different)
+          if [ "$INPUT_FILE" != "Monthly_Performance_CVR_latest.xlsx" ]; then
+            cp "workdir/$INPUT_FILE" "workdir/Monthly_Performance_CVR_latest.xlsx"
+          fi
 
           # Run onchain.py (it will look for files in DOCS_DIR)
           python onchain.py
