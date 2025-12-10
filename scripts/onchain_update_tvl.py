@@ -27,14 +27,32 @@ TVL_COL          = "O"
 STOP_EMPTY_LIMIT = 10
 REQUEST_DELAY    = 1.0
 
-def fetch(url):
-    try:
-        r = requests.get(url, timeout=20)
-        r.raise_for_status()
-        return r.json()
-    except Exception as e:
-        log_err(f"Failed to fetch {url}: {e}")
-        sys.exit(1)
+def fetch(url, max_retries=None, initial_delay=2):
+    """
+    Fetch URL with unlimited retries and exponential backoff.
+    
+    Args:
+        url: URL to fetch
+        max_retries: Maximum number of retries (None = unlimited)
+        initial_delay: Initial delay in seconds (doubles after each failure)
+    """
+    attempt = 0
+    delay = initial_delay
+    
+    while max_retries is None or attempt < max_retries:
+        try:
+            r = requests.get(url, timeout=20)
+            r.raise_for_status()
+            return r.json()
+        except Exception as e:
+            attempt += 1
+            log_warn(f"Attempt {attempt} failed for {url}: {e}")
+            log_info(f"Retrying in {delay} seconds...")
+            time.sleep(delay)
+            delay = min(delay * 2, 60)  
+    
+    log_err(f"Failed to fetch {url} after {max_retries} attempts")
+    sys.exit(1)
 
 def fetch_single_protocol(slug: str) -> dict:
     return fetch(f"https://api.llama.fi/protocol/{slug}")
