@@ -23,6 +23,10 @@ load_dotenv(SCRIPT_DIR / ".env")
 
 API_KEY = os.getenv("API_KEY")
 
+CMC_ID_OVERRIDES = {
+    "LIGHT": 37986,
+}
+
 CMC_URL  = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest"
 HEADERS  = {"X-CMC_PRO_API_KEY": API_KEY}
 
@@ -137,12 +141,51 @@ def smart_round(price: float) -> float:
     return round(price, decimals)
 
 def fetch_cmc_price(symbol: str) -> float | None:
-    params = {"symbol": symbol, "convert": "USD"}
+    symbol = symbol.strip().upper()
+
+    params = {"convert": "USD"}
+    cmc_id = CMC_ID_OVERRIDES.get(symbol)
+
+    if cmc_id is not None:
+        params["id"] = str(cmc_id)
+    else:
+        params["symbol"] = symbol
+
     r = requests.get(CMC_URL, headers=HEADERS, params=params, timeout=20)
+
+    # If the HTTP response itself failed, log it.
+    if r.status_code != 200:
+        log_warn(f"CMC HTTP {r.status_code} for {symbol}: {r.text[:200]}")
+        return None
+
     data = r.json() if r.content else {}
+
+    # If CMC returned an API-level error, log it.
+    status = data.get("status") or {}
+    if status.get("error_code", 0) != 0:
+        log_warn(f"CMC API error for {symbol}: {status.get('error_message')} (code {status.get('error_code')})")
+        return None
+
+    payload = data.get("data") or {}
+
     try:
-        return data["data"][symbol]["quote"]["USD"]["price"]
-    except Exception:
+        if cmc_id is not None:
+            # Most common shape: data is keyed by the id you passed in
+            item = payload.get(str(cmc_id))
+            if item and "quote" in item:
+                return item["quote"]["USD"]["price"]
+
+            # Fallback: sometimes providers return dict with a single entry
+            if isinstance(payload, dict) and len(payload) == 1:
+                only_item = next(iter(payload.values()))
+                return only_item["quote"]["USD"]["price"]
+
+            log_warn(f"CMC returned no data for id={cmc_id} (symbol {symbol}). Keys: {list(payload)[:5]}")
+            return None
+        else:
+            return payload[symbol]["quote"]["USD"]["price"]
+    except Exception as e:
+        log_warn(f"Unexpected CMC payload for {symbol}: {e}. Top-level keys: {list(data.keys())}")
         return None
 
 def run(input_path: Path, output_path: Path) -> None:
