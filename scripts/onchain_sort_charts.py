@@ -173,18 +173,32 @@ def main():
             if isinstance(v, (int, float)):
                 any_numeric = True
                 break
+
+            # NEW: if there is no cached value (Linux), try resolving single-cell references
+            rv = resolve_value(wb_w, wb_v, SHEET_NAME, KEY_COL, r)
+            if isinstance(rv, (int, float)):
+                any_numeric = True
+                break
+
         if any_numeric:
             break
 
+    # Only attempt Excel COM recalculation on Windows if we still couldn't resolve anything
     if not any_numeric and TRY_EXCEL_RECALC and os.name == "nt":
         if try_excel_recalc(INPUT_FILE):
             wb_w, wb_v = load_pair(INPUT_FILE)
             ws_w = wb_w[SHEET_NAME]
             ws_v = wb_v[SHEET_NAME]
+
+            # Re-run scan after recalculation
             for (s, e) in blocks:
                 for r in range(s, e + 1):
                     v = ws_v[f"{KEY_COL}{r}"].value
                     if isinstance(v, (int, float)):
+                        any_numeric = True
+                        break
+                    rv = resolve_value(wb_w, wb_v, SHEET_NAME, KEY_COL, r)
+                    if isinstance(rv, (int, float)):
                         any_numeric = True
                         break
                 if any_numeric:
@@ -192,10 +206,11 @@ def main():
 
     if not any_numeric and REQUIRE_NUMERIC_KEYS:
         log_err(
-            "Cannot sort: no cached numeric values found for key column. "
-            "Open the workbook in Excel and do a full recalculation (Ctrl+Alt+Shift+F9), save, then rerun."
+            "Cannot sort: no cached numeric values found for key column "
+            "(and no resolvable single-cell references)."
         )
         sys.exit(2)
+
 
     for (s, e) in blocks:
         start_sort_row = s if s == start_row else (s + 1)
