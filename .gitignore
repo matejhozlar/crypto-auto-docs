@@ -14,5 +14,6 @@
 /dist/
 /build/
 tmp.txt
+*.zip
 
 generate-structure.js
